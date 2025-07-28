@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Heatwave Map</title>
+  <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+</head>
+<body>
+  <div id="map" style="height: 100vh;"></div>
+  <input type="range" min="2000" max="2024" id="year-slider" />
+  <button onclick="toggleUnits()">°C / °F</button>
+
+  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+  <script>
+    const toFahrenheit = c => (c * 9/5 + 32).toFixed(1);
+    // Fetch GeoJSON with properties like { "country": ..., "days_above_35C": ..., "year": ... }
+
+    // Load map, bind slider, and toggle logic here.
+  </script>
+</body>
+</html>
