@@ -1,0 +1,9 @@
+dash
+cdsapi
+xarray
+numpy
+pandas
+netCDF4
+plotly
+python-dotenv
+gunicorn
