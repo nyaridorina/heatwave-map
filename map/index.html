@@ -2,19 +2,72 @@
 <html>
 <head>
   <title>Heatwave Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,width=device-width" />
   <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { width: 100vw; height: 100vh; }
+    #controls {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: white; padding: 10px; border-radius: 5px;
+      z-index: 1;
+    }
+  </style>
 </head>
 <body>
-  <div id="map" style="height: 100vh;"></div>
-  <input type="range" min="2000" max="2024" id="year-slider" />
-  <button onclick="toggleUnits()">°C / °F</button>
+  <div id="controls">
+    <input type="range" min="2000" max="2024" id="year-slider" />
+    <button onclick="toggleUnits()">°C / °F</button>
+  </div>
+  <div id="map"></div>
 
   <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
   <script>
-    const toFahrenheit = c => (c * 9/5 + 32).toFixed(1);
-    // Fetch GeoJSON with properties like { "country": ..., "days_above_35C": ..., "year": ... }
+    let useFahrenheit = false;
 
-    // Load map, bind slider, and toggle logic here.
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://demotiles.maplibre.org/style.json',
+      center: [0, 20],
+      zoom: 1.5
+    });
+
+    map.on('load', () => {
+      fetch('/data/heat_days_2022.geojson')
+        .then(res => res.json())
+        .then(data => {
+          map.addSource('heat', {
+            type: 'geojson',
+            data: data
+          });
+
+          map.addLayer({
+            id: 'heat-layer',
+            type: 'fill',
+            source: 'heat',
+            paint: {
+              'fill-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'DaysAbove35C'],
+                0, '#ffffcc',
+                10, '#ffeda0',
+                20, '#feb24c',
+                30, '#f03b20',
+                40, '#bd0026'
+              ],
+              'fill-opacity': 0.6
+            }
+          });
+        });
+    });
+
+    function toggleUnits() {
+      useFahrenheit = !useFahrenheit;
+      alert("Unit toggle only affects labels — actual logic needs coding!");
+    }
   </script>
 </body>
 </html>
