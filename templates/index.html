@@ -1,18 +1,157 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Heatwave Map</title>
-  <meta charset="utf-8" />
-  <style>#map { height: 100vh; }</style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+    integrity="sha256-sA+0bLE0zVrD3nUG8P3RmbJH+1EcT+Hm9l3vo/MNs7A="
+    crossorigin=""
+  />
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    .legend {
+      background: white;
+      padding: 6px 8px;
+      font: 14px Arial, sans-serif;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+      line-height: 18px;
+      color: #555;
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      z-index: 1000;
+    }
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+    }
+  </style>
 </head>
 <body>
   <div id="map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+    integrity="sha256-QVamYlgvwvGgh3hRvDvwNpk4CbSkf9v1Z9fvgC1A0rY="
+    crossorigin=""
+  ></script>
+
   <script>
-    var map = L.map('map').setView([48, 11], 4);  // Adjust center and zoom
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    L.imageOverlay('/data/your_exported_geotiff.tif', [[40, -10], [55, 30]]).addTo(map);  // adjust bounds!
+    // Example GeoJSON with minimal countries + fake data — replace with your own
+    const countriesGeoJSON = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": { "name": "Hungary", "days_above_35C": 12 },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[17.5, 48.5], [18, 48.5], [18, 47.5], [17.5, 47.5], [17.5, 48.5]]]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": { "name": "Egypt", "days_above_35C": 65 },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[30, 30], [32, 30], [32, 28], [30, 28], [30, 30]]]
+          }
+        }
+        // Add other countries or load real GeoJSON here!
+      ]
+    };
+
+    // Initialize map
+    const map = L.map("map").setView([48, 19], 4); // Center on Hungary region
+
+    // Add base tile layer
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
+
+    // Color scale for heatwave days
+    function getColor(d) {
+      return d > 30 ? "#800026" :
+             d > 20 ? "#BD0026" :
+             d > 10 ? "#E31A1C" :
+             d > 5  ? "#FC4E2A" :
+             d > 0  ? "#FD8D3C" :
+                      "#FFEDA0";
+    }
+
+    // Style each country polygon
+    function style(feature) {
+      return {
+        fillColor: getColor(feature.properties.days_above_35C),
+        weight: 1,
+        opacity: 1,
+        color: "white",
+        dashArray: "3",
+        fillOpacity: 0.7
+      };
+    }
+
+    // Highlight feature on mouseover
+    function highlightFeature(e) {
+      const layer = e.target;
+      layer.setStyle({
+        weight: 3,
+        color: "#666",
+        dashArray: "",
+        fillOpacity: 0.9
+      });
+      layer.bringToFront();
+    }
+
+    // Reset highlight on mouseout
+    function resetHighlight(e) {
+      geojson.resetStyle(e.target);
+    }
+
+    // Popup on click
+    function onEachFeature(feature, layer) {
+      layer.bindPopup(
+        `<strong>${feature.properties.name}</strong><br>` +
+        `Days above 35°C: ${feature.properties.days_above_35C}`
+      );
+      layer.on({
+        mouseover: highlightFeature,
+        mouseout: resetHighlight
+      });
+    }
+
+    // Add GeoJSON layer to map
+    const geojson = L.geoJSON(countriesGeoJSON, {
+      style: style,
+      onEachFeature: onEachFeature
+    }).addTo(map);
+
+    // Add legend
+    const legend = L.control({ position: "bottomleft" });
+
+    legend.onAdd = function () {
+      const div = L.DomUtil.create("div", "legend");
+      const grades = [0, 5, 10, 20, 30];
+      const labels = [];
+      for (let i = 0; i < grades.length; i++) {
+        div.innerHTML +=
+          '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+          grades[i] + (grades[i + 1] ? "&ndash;" + grades[i + 1] + "<br>" : "+");
+      }
+      return div;
+    };
+
+    legend.addTo(map);
   </script>
 </body>
 </html>
