@@ -1,0 +1,38 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "ADMIN": "Hungary",
+        "ISO_A3": "HUN"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[19.039,47.988],[22.884,47.478],[21.522,45.724],[18.956,46.618],[19.039,47.988]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ADMIN": "Egypt",
+        "ISO_A3": "EGY"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[31.678,30.062],[32.267,29.897],[31.425,29.559],[30.753,29.862],[31.678,30.062]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ADMIN": "India",
+        "ISO_A3": "IND"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[78.962,20.593],[77.837,21.843],[79.925,22.000],[80.0,20.0],[78.962,20.593]]]
+      }
+    }
+  ]
+}
