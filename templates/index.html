@@ -2,156 +2,186 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Heatwave Map</title>
+  <title>Heatwave Map - Days Above 35°C</title>
   <link
     rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
-    integrity="sha256-sA+0bLE0zVrD3nUG8P3RmbJH+1EcT+Hm9l3vo/MNs7A="
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-sA+Y2YDEo01NCTyi3VtO8aM4P5v5OcI7b7C0i7WxLhU="
     crossorigin=""
   />
   <style>
-    #map {
-      height: 100vh;
-      width: 100%;
-    }
-    .legend {
-      background: white;
-      padding: 6px 8px;
-      font: 14px Arial, sans-serif;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      border-radius: 5px;
-      line-height: 18px;
-      color: #555;
+    body, html { margin: 0; height: 100%; }
+    #map { height: 100vh; }
+    #controls {
       position: absolute;
-      bottom: 30px;
-      left: 10px;
+      top: 10px; left: 10px;
+      background: white;
+      padding: 8px;
+      border-radius: 4px;
       z-index: 1000;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      font-family: Arial, sans-serif;
     }
-    .legend i {
-      width: 18px;
-      height: 18px;
-      float: left;
-      margin-right: 8px;
-      opacity: 0.7;
+    #year-slider {
+      width: 200px;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div id="controls">
+    <label for="year-slider">Year: <span id="year-label">2023</span></label><br />
+    <input type="range" id="year-slider" min="2000" max="2024" value="2023" />
+    <br /><br />
+    <button id="unit-toggle">Show in °F</button>
+  </div>
 
   <script
-    src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
-    integrity="sha256-QVamYlgvwvGgh3hRvDvwNpk4CbSkf9v1Z9fvgC1A0rY="
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-o8Qb5Ee0H+s9N9FiQpcMlZz8Mxq4C96jF6vE6vZ7nA8="
     crossorigin=""
   ></script>
 
   <script>
-    // Example GeoJSON with minimal countries + fake data — replace with your own
-    const countriesGeoJSON = {
-      "type": "FeatureCollection",
-      "features": [
-        {
-          "type": "Feature",
-          "properties": { "name": "Hungary", "days_above_35C": 12 },
-          "geometry": {
-            "type": "Polygon",
-            "coordinates": [[[17.5, 48.5], [18, 48.5], [18, 47.5], [17.5, 47.5], [17.5, 48.5]]]
-          }
-        },
-        {
-          "type": "Feature",
-          "properties": { "name": "Egypt", "days_above_35C": 65 },
-          "geometry": {
-            "type": "Polygon",
-            "coordinates": [[[30, 30], [32, 30], [32, 28], [30, 28], [30, 30]]]
-          }
-        }
-        // Add other countries or load real GeoJSON here!
-      ]
-    };
+    // Globals
+    let currentYear = 2023;
+    let showFahrenheit = false;
+    let geojsonLayer = null;
+    let geojsonData = null;
 
-    // Initialize map
-    const map = L.map("map").setView([48, 19], 4); // Center on Hungary region
+    // Initialize Leaflet map
+    const map = L.map('map').setView([20, 0], 2);
 
     // Add base tile layer
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors"
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 8,
+      attribution: '© OpenStreetMap contributors',
     }).addTo(map);
 
-    // Color scale for heatwave days
+    // Color scale function for DaysAbove35C
     function getColor(d) {
-      return d > 30 ? "#800026" :
-             d > 20 ? "#BD0026" :
-             d > 10 ? "#E31A1C" :
-             d > 5  ? "#FC4E2A" :
-             d > 0  ? "#FD8D3C" :
-                      "#FFEDA0";
+      return d > 50 ? '#800026' :
+             d > 30 ? '#BD0026' :
+             d > 20 ? '#E31A1C' :
+             d > 10 ? '#FC4E2A' :
+             d > 5  ? '#FD8D3C' :
+             d > 0  ? '#FEB24C' :
+                      '#FFEDA0';
     }
 
-    // Style each country polygon
+    // Convert Celsius to Fahrenheit
+    function toFahrenheit(c) {
+      return (c * 9/5 + 32).toFixed(1);
+    }
+
+    // Style function for GeoJSON layer
     function style(feature) {
+      let days = feature.properties[`DaysAbove35C_${currentYear}`];
+      if (days === undefined) days = 0;
+
+      // Convert units if needed
+      let displayDays = showFahrenheit ? toFahrenheit(days) : days;
+
       return {
-        fillColor: getColor(feature.properties.days_above_35C),
+        fillColor: getColor(days),
         weight: 1,
         opacity: 1,
-        color: "white",
-        dashArray: "3",
+        color: 'white',
+        dashArray: '3',
         fillOpacity: 0.7
       };
     }
 
-    // Highlight feature on mouseover
+    // Highlight on hover
     function highlightFeature(e) {
       const layer = e.target;
       layer.setStyle({
         weight: 3,
-        color: "#666",
-        dashArray: "",
+        color: '#666',
+        dashArray: '',
         fillOpacity: 0.9
       });
-      layer.bringToFront();
+
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        layer.bringToFront();
+      }
     }
 
-    // Reset highlight on mouseout
+    // Reset highlight
     function resetHighlight(e) {
-      geojson.resetStyle(e.target);
+      geojsonLayer.resetStyle(e.target);
     }
 
-    // Popup on click
+    // Zoom to feature on click
+    function zoomToFeature(e) {
+      map.fitBounds(e.target.getBounds());
+    }
+
+    // Attach listeners to each feature
     function onEachFeature(feature, layer) {
-      layer.bindPopup(
-        `<strong>${feature.properties.name}</strong><br>` +
-        `Days above 35°C: ${feature.properties.days_above_35C}`
-      );
       layer.on({
         mouseover: highlightFeature,
-        mouseout: resetHighlight
+        mouseout: resetHighlight,
+        click: zoomToFeature
       });
+
+      let days = feature.properties[`DaysAbove35C_${currentYear}`];
+      if (days === undefined) days = 0;
+
+      let displayDays = showFahrenheit ? toFahrenheit(days) : days;
+
+      layer.bindPopup(`<strong>${feature.properties.ADMIN}</strong><br>Days >35°C: ${displayDays}`);
     }
 
-    // Add GeoJSON layer to map
-    const geojson = L.geoJSON(countriesGeoJSON, {
-      style: style,
-      onEachFeature: onEachFeature
-    }).addTo(map);
+    // Load GeoJSON data and add to map
+    async function loadGeojson() {
+      // Fetch GeoJSON from server
+      const response = await fetch('/data/countries_heatwave.geojson');
+      geojsonData = await response.json();
 
-    // Add legend
-    const legend = L.control({ position: "bottomleft" });
-
-    legend.onAdd = function () {
-      const div = L.DomUtil.create("div", "legend");
-      const grades = [0, 5, 10, 20, 30];
-      const labels = [];
-      for (let i = 0; i < grades.length; i++) {
-        div.innerHTML +=
-          '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
-          grades[i] + (grades[i + 1] ? "&ndash;" + grades[i + 1] + "<br>" : "+");
+      // Remove existing layer if present
+      if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
       }
-      return div;
-    };
 
-    legend.addTo(map);
+      // Add new layer with current year styling
+      geojsonLayer = L.geoJSON(geojsonData, {
+        style: style,
+        onEachFeature: onEachFeature
+      }).addTo(map);
+    }
+
+    // Update map on year or unit toggle
+    function updateMap() {
+      if (!geojsonData) return;
+
+      // Remove existing layer
+      if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
+      }
+
+      // Add updated layer with new year & unit
+      geojsonLayer = L.geoJSON(geojsonData, {
+        style: style,
+        onEachFeature: onEachFeature
+      }).addTo(map);
+    }
+
+    // Event listeners for controls
+    document.getElementById('year-slider').addEventListener('input', (e) => {
+      currentYear = e.target.value;
+      document.getElementById('year-label').textContent = currentYear;
+      updateMap();
+    });
+
+    document.getElementById('unit-toggle').addEventListener('click', () => {
+      showFahrenheit = !showFahrenheit;
+      document.getElementById('unit-toggle').textContent = showFahrenheit ? 'Show in °C' : 'Show in °F';
+      updateMap();
+    });
+
+    // Initial load
+    loadGeojson();
   </script>
 </body>
 </html>
