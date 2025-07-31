@@ -7,3 +7,5 @@ netCDF4
 plotly
 python-dotenv
 gunicorn
+rioxarray
+flask
